@@ -300,6 +300,9 @@
   .acct-bal { font-family:'Fraunces',serif; font-size:21px; font-weight:600; text-align:right; }
   .acct-bal.neg { color:var(--red-over); }
   .owed-tag { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); margin-top:1px; }
+  .loan-preview { background:var(--plum-light); border:1px solid #DBCBEF; border-radius:11px; padding:11px 14px; font-size:14px; color:var(--ink); }
+  .loan-preview b { font-family:'Fraunces',serif; font-size:18px; color:var(--plum); }
+  .loan-preview .lp-sub { font-size:12px; color:var(--ink-light); }
   .acct-flows { display:flex; gap:14px; margin-top:11px; font-size:12px; }
   .acct-flows .fl { display:flex; flex-direction:column; }
   .acct-flows .fl .fk { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); }
@@ -648,6 +651,26 @@
       </div>
     </div>
 
+    <!-- ════════ LOANS ════════ -->
+    <div class="page" id="page-loans">
+      <div class="hero" style="background:linear-gradient(135deg,#4A3A6B 0%,#6B5494 60%,#8A6FB0 100%)">
+        <div class="label">Loans Outstanding</div>
+        <div class="net" id="loan-outstanding" style="background:linear-gradient(90deg,#fff,#E6D8F5);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">₨ 0</div>
+        <div class="net-sub">total you still owe across all loans</div>
+        <div class="hero-row">
+          <div class="hero-chip"><div class="k">Monthly EMI</div><div class="v" id="loan-emi">₨ 0</div></div>
+          <div class="hero-chip"><div class="k">Total Interest</div><div class="v" id="loan-interest">₨ 0</div></div>
+          <div class="hero-chip"><div class="k">Loans</div><div class="v" id="loan-count">0</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Your Loans
+          <button class="mini-btn" onclick="openLoanModal()">+ Loan</button>
+        </div>
+        <div id="loans-list"></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Bottom nav -->
@@ -657,6 +680,7 @@
     <button class="nav-btn"    data-page="goals"    onclick="goPage('goals')"><span class="ni">🎯</span>Goals</button>
     <button class="nav-btn"    data-page="budget"   onclick="goPage('budget')"><span class="ni">📊</span>Budget</button>
     <button class="nav-btn"    data-page="wealth"   onclick="goPage('wealth')"><span class="ni">💎</span>Wealth</button>
+    <button class="nav-btn"    data-page="loans"    onclick="goPage('loans')"><span class="ni">💳</span>Loans</button>
   </div>
 </div>
 
@@ -711,7 +735,7 @@ const PF_META = {
 // ════════════════════════════════════════════════════════════
 //  STATE
 // ════════════════════════════════════════════════════════════
-let DATA = { expenses:[], accounts:[], goals:[], budgets:[], portfolio:[] };
+let DATA = { expenses:[], accounts:[], goals:[], budgets:[], portfolio:[], loans:[] };
 let currentUser = null;
 let txType = 'expense';
 let pfFilter = 'all';
@@ -793,7 +817,8 @@ const PAGE_TITLES = {
   accounts:['Accounts','where your money lives'],
   goals:['Savings Goals','dream it, fund it'],
   budget:['Budget','plan vs reality'],
-  wealth:['Wealth','the bigger picture']
+  wealth:['Wealth','the bigger picture'],
+  loans:['Loans','principal, interest & EMI']
 };
 function goPage(p) {
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
@@ -882,6 +907,7 @@ async function loadData(silent) {
       DATA.goals     = d.goals     || [];
       DATA.budgets   = d.budgets   || [];
       DATA.portfolio = d.portfolio || [];
+      DATA.loans     = d.loans     || [];
       renderAll();
     }
   } catch(e) {
@@ -949,6 +975,7 @@ function renderAll(){
   renderGoals();
   renderBudget();
   renderWealth();
+  renderLoans();
 }
 
 // ── helpers ──
@@ -998,8 +1025,39 @@ function portfolioTotals(){
   });
   return {invest,save,loanTo,loanFrom, net: invest+save+loanTo-loanFrom};
 }
-// Net worth = cash − card debt + savings/investments + owed-to-you − you-owe.
-function netWorth(){ return bankAssets() - creditOwedTotal() + portfolioTotals().net; }
+// Net worth = cash − card debt + savings/investments + owed-to-you − you-owe − loans outstanding.
+function netWorth(){ return bankAssets() - creditOwedTotal() + portfolioTotals().net - loansOutstanding(); }
+
+// ── Loan maths (EMI + outstanding balance) ──
+function loanRate(rate){ return num(rate)/12/100; }      // monthly rate as a fraction
+function loanEMI(P, rate, n){
+  P=num(P); n=num(n); const r=loanRate(rate);
+  if(n<=0) return 0;
+  if(r===0) return P/n;
+  const f=Math.pow(1+r,n);
+  return P*r*f/(f-1);
+}
+function loanOutstanding(P, rate, n, paid){
+  P=num(P); n=num(n); paid=Math.min(num(paid),n); const r=loanRate(rate);
+  if(n<=0) return 0;
+  if(paid<=0) return P;
+  if(paid>=n) return 0;
+  const emi=loanEMI(P,rate,n);
+  if(r===0) return Math.max(0, P - emi*paid);
+  const f=Math.pow(1+r,paid);
+  return Math.max(0, P*f - emi*(f-1)/r);
+}
+function loanTotals(){
+  let outstanding=0, emiTotal=0, interest=0;
+  DATA.loans.forEach(l=>{
+    outstanding += loanOutstanding(l.principal,l.rate,l.months,l.paid);
+    const emi=loanEMI(l.principal,l.rate,l.months);
+    if(num(l.paid) < num(l.months)) emiTotal += emi;
+    interest += Math.max(0, emi*num(l.months) - num(l.principal));
+  });
+  return {outstanding, emiTotal, interest};
+}
+function loansOutstanding(){ return loanTotals().outstanding; }
 
 // ════════════════════════════════════════════════════════════
 //  RENDER — HOME
@@ -1349,6 +1407,52 @@ function renderWealth(){
   }).join('');
 }
 function delPf(id){ confirmAction('This item will be removed from your wealth tracker.', async ()=>{ const d=await apiDelete('portfolio',id); if(d.success){showToast('Removed'); loadData(true);} }); }
+
+// ════════════════════════════════════════════════════════════
+//  LOANS
+// ════════════════════════════════════════════════════════════
+function renderLoans(){
+  const t=loanTotals();
+  countUp('loan-outstanding', t.outstanding, true);
+  document.getElementById('loan-emi').textContent=rs(t.emiTotal);
+  document.getElementById('loan-interest').textContent=rs(t.interest);
+  document.getElementById('loan-count').textContent=String(DATA.loans.length);
+
+  const el=document.getElementById('loans-list');
+  if(!DATA.loans.length){
+    el.innerHTML=`<div class="empty-state"><div class="icon">💳</div><p>No loans yet. Tap “+ Loan”, enter the principal, interest rate and months, and we’ll work out your EMI.</p></div>`;
+    return;
+  }
+  el.innerHTML=DATA.loans.slice().reverse().map((l,i)=>{
+    const color=ACC_COLORS[i%ACC_COLORS.length];
+    const emi=loanEMI(l.principal,l.rate,l.months);
+    const out=loanOutstanding(l.principal,l.rate,l.months,l.paid);
+    const paid=Math.min(num(l.paid),num(l.months));
+    const pct=num(l.months)>0?Math.round(paid/num(l.months)*100):0;
+    const totalInt=Math.max(0, emi*num(l.months)-num(l.principal));
+    const done=paid>=num(l.months) && num(l.months)>0;
+    return `
+      <div class="acct-card">
+        <div class="acc-stripe" style="background:${color}"></div>
+        <div class="acct-head">
+          <div><div class="acct-name">${esc(l.name)}</div><div class="acct-type">${num(l.rate)}% p.a. · ${num(l.months)} months</div></div>
+          <div style="text-align:right"><div class="acct-bal">${rs(out)}</div><div class="owed-tag">${done?'paid off 🎉':'still owe'}</div></div>
+        </div>
+        <div class="acct-flows">
+          <div class="fl"><span class="fk">EMI / month</span><span class="fv">${rs(emi)}</span></div>
+          <div class="fl"><span class="fk">Total interest</span><span class="fv out">${rs(totalInt)}</span></div>
+          <div class="fl"><span class="fk">Paid</span><span class="fv">${paid}/${num(l.months)} mo</span></div>
+        </div>
+        <div class="goal-mini-bar" style="margin-top:11px"><div class="goal-mini-fill" data-w="${pct}" style="background:${color}"></div></div>
+        <div class="acct-actions" style="margin-top:12px">
+          <button class="tiny-btn" onclick="incLoanPaid('${l.id}')">+1 month paid</button>
+          <button class="tiny-btn" onclick="openLoanModal('${l.id}')">Edit</button>
+          <button class="tiny-btn danger" onclick="delLoan('${l.id}')">Delete</button>
+        </div>
+      </div>`;
+  }).join('');
+  setTimeout(()=>el.querySelectorAll('.goal-mini-fill').forEach(f=>f.style.width=f.dataset.w+'%'),60);
+}
 </script>
 
 <script>
@@ -1581,6 +1685,64 @@ async function savePf(id){
   if(id) payload.id=id;
   const d=await apiPost(payload);
   if(d.success){ closeModal(); burstConfetti(['#2F8F83','#E8B84B','#fff']); showToast(id?'Updated':'Added 💎'); loadData(true); }
+}
+
+// ── LOAN modal ──
+function openLoanModal(id){
+  const l = id ? DATA.loans.find(x=>x.id.toString()===id.toString()) : null;
+  showModal(`
+    <h2>${l?'Edit Loan':'New Loan'} 💳</h2>
+    <div class="msub">Enter the basics — we’ll work out your EMI</div>
+    <div class="form-group full" style="margin-bottom:10px"><label>Loan name</label><input id="m-loan-name" value="${l?esc(l.name):''}" placeholder="e.g. Car Loan, Home Loan"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Principal (₨)</label><input type="number" id="m-loan-p" value="${l?num(l.principal):''}" placeholder="0" inputmode="decimal"/></div>
+      <div class="form-group"><label>Interest rate (% / year)</label><input type="number" id="m-loan-r" value="${l?num(l.rate):''}" placeholder="0" step="0.01" inputmode="decimal"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Period (months)</label><input type="number" id="m-loan-n" value="${l?num(l.months):''}" placeholder="0" inputmode="numeric"/></div>
+      <div class="form-group"><label>Months paid so far</label><input type="number" id="m-loan-paid" value="${l?num(l.paid):'0'}" placeholder="0" inputmode="numeric"/></div>
+    </div>
+    <div class="loan-preview" id="loan-preview"></div>
+    <button class="add-btn" style="margin-top:12px" onclick="saveLoan('${id||''}')">${l?'Save Changes':'Add Loan'}</button>
+    <div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button></div>`);
+  ['m-loan-p','m-loan-r','m-loan-n'].forEach(idd=>document.getElementById(idd).addEventListener('input', updateLoanPreview));
+  updateLoanPreview();
+}
+function updateLoanPreview(){
+  const P=document.getElementById('m-loan-p').value;
+  const R=document.getElementById('m-loan-r').value;
+  const N=document.getElementById('m-loan-n').value;
+  const box=document.getElementById('loan-preview');
+  if(num(P)>0 && num(N)>0){
+    const emi=loanEMI(P,R,N); const total=emi*num(N); const interest=Math.max(0,total-num(P));
+    box.innerHTML=`Monthly EMI <b>${rs(emi)}</b><br><span class="lp-sub">Total payable ${rs(total)} · Interest ${rs(interest)}</span>`;
+  } else {
+    box.innerHTML=`<span class="lp-sub">Enter principal, rate and months to see your EMI.</span>`;
+  }
+}
+async function saveLoan(id){
+  const name=document.getElementById('m-loan-name').value.trim();
+  const P=document.getElementById('m-loan-p').value;
+  const R=document.getElementById('m-loan-r').value;
+  const N=document.getElementById('m-loan-n').value;
+  const paid=document.getElementById('m-loan-paid').value||0;
+  if(!name) return showToast('Name the loan');
+  if(!P||P<=0) return showToast('Enter the principal');
+  if(!N||N<=0) return showToast('Enter the period in months');
+  const payload={ entity:'loan', action:id?'update':'add', name,
+    principal:P, rate:R||0, months:N, paid:paid, addedBy:currentUser };
+  if(id) payload.id=id;
+  const d=await apiPost(payload);
+  if(d.success){ closeModal(); burstConfetti(['#7B5EA7','#E8B84B','#fff']); showToast(id?'Loan updated':'Loan added 💳'); loadData(true); }
+  else showToast('Could not save');
+}
+function delLoan(id){ confirmAction('This loan will be deleted.', async ()=>{ const d=await apiDelete('loan',id); if(d.success){showToast('Loan removed'); loadData(true);} }); }
+async function incLoanPaid(id){
+  const l=DATA.loans.find(x=>x.id.toString()===id.toString());
+  if(num(l.paid)>=num(l.months)) return showToast('This loan is already fully paid 🎉');
+  const d=await apiPost({ entity:'loan', action:'increment', id, field:'Paid', amount:1 });
+  if(d.success){ burstConfetti(['#7B5EA7','#5A7A5E','#fff']); showToast('One more month paid ✓'); loadData(true); }
+  else showToast('Could not update');
 }
 
 // ════════════════════════════════════════════════════════════
