@@ -1,883 +1,246 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Our Expenses</title>
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --cream: #FAF7F2;
-    --warm-white: #FFFDF9;
-    --paper: #F5F0E8;
-    --ink: #2C2416;
-    --ink-light: #7A6E5F;
-    --ink-faint: #B8AFA0;
-    --terracotta: #C4603A;
-    --terracotta-light: #F2E6E0;
-    --terracotta-faint: #FAF2EE;
-    --sage: #5A7A5E;
-    --sage-light: #E4EDE5;
-    --sage-faint: #F2F6F2;
-    --amber: #B8860B;
-    --amber-light: #FDF3D0;
-    --border: #E2D9CC;
-    --shadow: 0 2px 12px rgba(44,36,22,0.07);
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--cream);
-    color: var(--ink);
-    min-height: 100vh;
-    padding: 0 0 60px;
-  }
-
-  /* ── Header ── */
-  .header {
-    background: var(--warm-white);
-    border-bottom: 1px solid var(--border);
-    padding: 20px 24px 16px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .header-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .header h1 {
-    font-family: 'Lora', serif;
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--ink);
-    line-height: 1.2;
-  }
-
-  .header h1 span {
-    display: block;
-    font-size: 13px;
-    font-weight: 400;
-    font-family: 'DM Sans', sans-serif;
-    color: var(--ink-light);
-    margin-top: 2px;
-  }
-
-  .user-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--paper);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 6px 14px 6px 8px;
-    font-size: 13px;
-    color: var(--ink);
-    cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .avatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-  }
-
-  .avatar.h { background: var(--sage-light); color: var(--sage); }
-  .avatar.w { background: var(--terracotta-light); color: var(--terracotta); }
-
-  .api-banner {
-    margin-top: 12px;
-    background: var(--amber-light);
-    border: 1px solid #E8D080;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 12px;
-    color: var(--amber);
-    display: none;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .api-banner.show { display: flex; }
-
-  .api-banner input {
-    flex: 1;
-    border: 1px solid #D4C060;
-    border-radius: 6px;
-    padding: 5px 10px;
-    font-size: 12px;
-    background: #FFFDF0;
-    color: var(--ink);
-    font-family: 'DM Sans', sans-serif;
-    min-width: 0;
-  }
-
-  .api-banner button {
-    background: var(--amber);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 12px;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    white-space: nowrap;
-  }
-
-  /* ── Main ── */
-  .main { max-width: 640px; margin: 0 auto; padding: 20px 16px; }
-
-  /* ── Summary Cards ── */
-  .summary {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-
-  .summary-card {
-    background: var(--warm-white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-  }
-
-  .summary-card.wide {
-    grid-column: 1 / -1;
-  }
-
-  .summary-card .label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ink-faint);
-    margin-bottom: 4px;
-  }
-
-  .summary-card .amount {
-    font-family: 'Lora', serif;
-    font-size: 26px;
-    font-weight: 600;
-    color: var(--ink);
-  }
-
-  .summary-card .sub {
-    font-size: 12px;
-    color: var(--ink-light);
-    margin-top: 2px;
-  }
-
-  /* Category breakdown */
-  .breakdown { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
-
-  .breakdown-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-  }
-
-  .breakdown-row .cat-name {
-    width: 90px;
-    color: var(--ink-light);
-    flex-shrink: 0;
-  }
-
-  .bar-wrap {
-    flex: 1;
-    height: 6px;
-    background: var(--paper);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.4s ease;
-  }
-
-  .breakdown-row .cat-amt {
-    font-weight: 500;
-    color: var(--ink);
-    min-width: 65px;
-    text-align: right;
-    font-size: 12px;
-  }
-
-  /* ── Add Form ── */
-  .add-section {
-    background: var(--warm-white);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow);
-  }
-
-  .section-title {
-    font-family: 'Lora', serif;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--ink);
-    margin-bottom: 14px;
-  }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
-  .form-group.full { grid-column: 1 / -1; }
-
-  label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--ink-faint);
-  }
-
-  input, select, textarea {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    color: var(--ink);
-    background: var(--cream);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 9px 12px;
-    outline: none;
-    transition: border-color 0.15s;
-    width: 100%;
-  }
-
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--terracotta);
-  }
-
-  textarea { resize: none; height: 64px; }
-
-  .add-btn {
-    width: 100%;
-    padding: 11px;
-    background: var(--terracotta);
-    color: white;
-    border: none;
-    border-radius: 9px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    margin-top: 6px;
-    transition: opacity 0.15s, transform 0.1s;
-  }
-
-  .add-btn:hover { opacity: 0.9; }
-  .add-btn:active { transform: scale(0.99); }
-  .add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  /* ── Expense List ── */
-  .list-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-
-  .list-header .section-title { margin: 0; }
-
-  .refresh-btn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 5px 10px;
-    font-size: 12px;
-    color: var(--ink-light);
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    transition: border-color 0.15s;
-  }
-
-  .refresh-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
-
-  .refresh-btn svg { width: 13px; height: 13px; }
-
-  .expense-list { display: flex; flex-direction: column; gap: 8px; }
-
-  .expense-item {
-    background: var(--warm-white);
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    padding: 13px 15px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    animation: slideIn 0.2s ease;
-  }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .cat-dot {
-    width: 36px;
-    height: 36px;
-    border-radius: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
-  }
-
-  .expense-main { flex: 1; min-width: 0; }
-
-  .expense-top {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    margin-bottom: 2px;
-  }
-
-  .expense-category {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ink);
-  }
-
-  .who-badge {
-    font-size: 10px;
-    font-weight: 500;
-    padding: 2px 7px;
-    border-radius: 10px;
-    letter-spacing: 0.04em;
-  }
-
-  .who-badge.H {
-    background: var(--sage-light);
-    color: var(--sage);
-  }
-
-  .who-badge.W {
-    background: var(--terracotta-light);
-    color: var(--terracotta);
-  }
-
-  .expense-note {
-    font-size: 12px;
-    color: var(--ink-light);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .expense-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 5px;
-    flex-shrink: 0;
-  }
-
-  .expense-amount {
-    font-family: 'Lora', serif;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--ink);
-  }
-
-  .expense-date {
-    font-size: 11px;
-    color: var(--ink-faint);
-  }
-
-  .delete-btn {
-    background: none;
-    border: none;
-    color: var(--ink-faint);
-    cursor: pointer;
-    padding: 3px;
-    line-height: 1;
-    border-radius: 4px;
-    transition: color 0.15s;
-  }
-
-  .delete-btn:hover { color: #C0392B; }
-
-  .empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--ink-faint);
-  }
-
-  .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
-  .empty-state p { font-size: 14px; }
-
-  /* ── User Picker Modal ── */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(44,36,22,0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 999;
-    padding: 20px;
-  }
-
-  .modal {
-    background: var(--warm-white);
-    border-radius: 16px;
-    padding: 30px 24px;
-    max-width: 320px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(44,36,22,0.2);
-  }
-
-  .modal h2 {
-    font-family: 'Lora', serif;
-    font-size: 20px;
-    color: var(--ink);
-    margin-bottom: 6px;
-  }
-
-  .modal p {
-    font-size: 13px;
-    color: var(--ink-light);
-    margin-bottom: 24px;
-  }
-
-  .user-choices { display: flex; gap: 12px; justify-content: center; }
-
-  .user-choice-btn {
-    flex: 1;
-    padding: 18px 10px;
-    border-radius: 12px;
-    border: 2px solid var(--border);
-    background: var(--cream);
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    color: var(--ink-light);
-    transition: all 0.15s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .user-choice-btn .choice-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600;
-  }
-
-  .user-choice-btn:nth-child(1) .choice-avatar { background: var(--sage-light); color: var(--sage); }
-  .user-choice-btn:nth-child(2) .choice-avatar { background: var(--terracotta-light); color: var(--terracotta); }
-
-  .user-choice-btn:nth-child(1):hover { border-color: var(--sage); background: var(--sage-faint); }
-  .user-choice-btn:nth-child(2):hover { border-color: var(--terracotta); background: var(--terracotta-faint); }
-
-  .toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: var(--ink);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 13px;
-    z-index: 9999;
-    transition: transform 0.3s ease;
-    white-space: nowrap;
-  }
-
-  .toast.show { transform: translateX(-50%) translateY(0); }
-
-  @media (max-width: 420px) {
-    .form-row { grid-template-columns: 1fr; }
-    .summary { grid-template-columns: 1fr; }
-    .summary-card.wide { grid-column: 1; }
-  }
-</style>
-</head>
-<body>
-
-<!-- User picker modal -->
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <h2>Welcome back 🏡</h2>
-    <p>Who's updating the expenses today?</p>
-    <div class="user-choices">
-      <button class="user-choice-btn" onclick="setUser('H')">
-        <div class="choice-avatar">H</div>
-        Husband
-      </button>
-      <button class="user-choice-btn" onclick="setUser('W')">
-        <div class="choice-avatar">W</div>
-        Wife
-      </button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<!-- Header -->
-<div class="header">
-  <div class="header-top">
-    <h1>
-      Our Expenses
-      <span id="month-label">Loading...</span>
-    </h1>
-    <div class="user-pill" onclick="switchUser()">
-      <div class="avatar" id="user-avatar">?</div>
-      <span id="user-name">...</span>
-    </div>
-  </div>
-  <div class="api-banner" id="api-banner">
-    ⚠️ Paste your Apps Script URL:
-    <input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/.../exec" />
-    <button onclick="saveApiUrl()">Save</button>
-  </div>
-</div>
-
-<div class="main">
-
-  <!-- Summary -->
-  <div class="summary">
-    <div class="summary-card">
-      <div class="label">This Month</div>
-      <div class="amount" id="total-month">₨ 0</div>
-      <div class="sub" id="entry-count">0 entries</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">This Week</div>
-      <div class="amount" id="total-week">₨ 0</div>
-      <div class="sub" id="week-sub">last 7 days</div>
-    </div>
-    <div class="summary-card wide" id="breakdown-card">
-      <div class="label">By Category</div>
-      <div class="breakdown" id="breakdown"></div>
-    </div>
-  </div>
-
-  <!-- Add Form -->
-  <div class="add-section">
-    <div class="section-title">Add an Expense</div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Amount (NPR ₨)</label>
-        <input type="number" id="amount" placeholder="0" min="0" />
-      </div>
-      <div class="form-group">
-        <label>Category</label>
-        <select id="category">
-          <option value="Food">🍜 Food</option>
-          <option value="Transport">🚗 Transport</option>
-          <option value="Bills">💡 Bills</option>
-          <option value="Entertainment">🎬 Entertainment</option>
-          <option value="Health">❤️ Health</option>
-          <option value="Other">📦 Other</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group full">
-        <label>Note (optional)</label>
-        <textarea id="note" placeholder="What was it for?"></textarea>
-      </div>
-    </div>
-    <button class="add-btn" id="add-btn" onclick="addExpense()">Add Expense</button>
-  </div>
-
-  <!-- Expense List -->
-  <div class="list-header">
-    <div class="section-title">Recent Expenses</div>
-    <button class="refresh-btn" onclick="loadExpenses()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M23 4v6h-6M1 20v-6h6"/>
-        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-      </svg>
-      Refresh
-    </button>
-  </div>
-
-  <div class="expense-list" id="expense-list">
-    <div class="empty-state">
-      <div class="icon">📋</div>
-      <p>Loading expenses...</p>
-    </div>
-  </div>
-
-</div>
-
-<script>
-const CAT_COLORS = {
-  Food:          { bg: '#FFF3E0', emoji: '🍜' },
-  Transport:     { bg: '#E3F2FD', emoji: '🚗' },
-  Bills:         { bg: '#F3E5F5', emoji: '💡' },
-  Entertainment: { bg: '#E8F5E9', emoji: '🎬' },
-  Health:        { bg: '#FCE4EC', emoji: '❤️' },
-  Other:         { bg: '#ECEFF1', emoji: '📦' }
+// ============================================================
+// HOUSEHOLD MONEY HUB — Google Apps Script Backend  (v2.1)
+// ============================================================
+// SETUP / REDEPLOY INSTRUCTIONS:
+// 1. Go to script.google.com → open your "Expenses" project
+// 2. Select ALL existing code and replace it with this entire file
+// 3. SHEET_ID below is already set to your sheet — leave it.
+// 4. TOKEN below is your family password. It MUST match the
+//    password you type in the app (currently "sanu"). If you ever
+//    change one, change both.
+// 5. Press Ctrl+S (save)
+// 6. Deploy → Manage deployments → pick your existing Web App →
+//    edit (pencil) → Version: "New version" → Deploy.
+//    (This KEEPS THE SAME URL. If you instead use "New deployment",
+//     paste the new URL into the app's Settings.)
+//
+// IMPORTANT: deploy this AND update index.html on GitHub together.
+// The new backend rejects any request that doesn't send the right
+// token, so an old copy of the app will stop loading until updated.
+// ============================================================
+
+const SHEET_ID = "1NmGRCTxeTKrFGvw3f0yF-sY2Q2KqpyYNUDddU4sFK5o";
+const TOKEN    = "sanu";   // ← family password / data key. Set "" to disable the check.
+
+// Each entity → its tab name + column headers (order matters).
+const SHEETS = {
+  expense:   { name: "Expenses",  headers: ["ID","Date","Amount","Category","Note","AddedBy","Type","Account"] },
+  account:   { name: "Accounts",  headers: ["ID","Name","Type","OpeningBalance","AddedBy","Created"] },
+  goal:      { name: "Goals",     headers: ["ID","Name","Target","Saved","Emoji","Color","AddedBy","Created"] },
+  budget:    { name: "Budgets",   headers: ["ID","Category","Limit","AddedBy","Created"] },
+  portfolio: { name: "Portfolio", headers: ["ID","Type","Name","Amount","Note","AddedBy","Created"] }
 };
 
-const BAR_COLORS = ['#C4603A','#5A7A5E','#B8860B','#7B68EE','#4A90D9','#888'];
+// ── Auth ───────────────────────────────────────────────────
+function isAuthed(token) { return TOKEN === "" || token === TOKEN; }
+function unauthorized()  { return jsonResponse({ error: "unauthorized" }); }
 
-let expenses = [];
-let currentUser = null;
-let API_URL = localStorage.getItem('expense_api_url') || '';
-let refreshTimer = null;
+// ── Concurrency lock (prevents two writes clobbering each other) ──
+function withLock(fn) {
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(12000); } catch (e) { return jsonResponse({ error: "busy" }); }
+  try { return fn(); } finally { lock.releaseLock(); }
+}
 
-// ── Init ──
-window.onload = () => {
-  const now = new Date();
-  document.getElementById('month-label').textContent =
-    now.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-  currentUser = localStorage.getItem('expense_user');
-  if (currentUser) {
-    hideModal();
-    updateUserUI();
-  }
-
-  if (!API_URL) {
-    document.getElementById('api-banner').classList.add('show');
+// ── Sheet helpers ──────────────────────────────────────────
+function getSheetFor(key) {
+  const cfg = SHEETS[key];
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName(cfg.name);
+  if (!sheet) {
+    sheet = ss.insertSheet(cfg.name);
+    sheet.appendRow(cfg.headers);
+    sheet.getRange(1, 1, 1, cfg.headers.length).setFontWeight("bold");
   } else {
-    loadExpenses();
-    startAutoRefresh();
-  }
-};
-
-function setUser(u) {
-  currentUser = u;
-  localStorage.setItem('expense_user', u);
-  hideModal();
-  updateUserUI();
-}
-
-function hideModal() {
-  document.getElementById('modal').style.display = 'none';
-}
-
-function switchUser() {
-  document.getElementById('modal').style.display = 'flex';
-}
-
-function updateUserUI() {
-  const av = document.getElementById('user-avatar');
-  const nm = document.getElementById('user-name');
-  av.textContent = currentUser || '?';
-  av.className = 'avatar ' + (currentUser || '').toLowerCase();
-  nm.textContent = currentUser === 'H' ? 'Husband' : currentUser === 'W' ? 'Wife' : '...';
-}
-
-function saveApiUrl() {
-  const val = document.getElementById('api-url-input').value.trim();
-  if (!val.startsWith('https://')) return showToast('Please paste a valid URL');
-  API_URL = val;
-  localStorage.setItem('expense_api_url', val);
-  document.getElementById('api-banner').classList.remove('show');
-  showToast('URL saved! Loading expenses...');
-  loadExpenses();
-  startAutoRefresh();
-}
-
-// ── API Calls ──
-async function loadExpenses() {
-  if (!API_URL) return;
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    if (Array.isArray(data)) {
-      expenses = data;
-      renderAll();
+    const lastCol = Math.max(sheet.getLastColumn(), 1);
+    const head = sheet.getRange(1, 1, 1, Math.max(lastCol, cfg.headers.length)).getValues()[0];
+    if (head.length < cfg.headers.length || head[cfg.headers.length - 1] !== cfg.headers[cfg.headers.length - 1]) {
+      sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]).setFontWeight("bold");
     }
-  } catch (e) {
-    showToast('Could not reach the server. Check your URL.');
+  }
+  return sheet;
+}
+
+function normalizeKey(h) {
+  if (h === "ID") return "id";
+  if (h === "OpeningBalance") return "openingBalance";
+  if (h === "AddedBy") return "addedBy";
+  return h.charAt(0).toLowerCase() + h.slice(1);
+}
+
+function rowToObj(key, row) {
+  const headers = SHEETS[key].headers;
+  const obj = {};
+  headers.forEach((h, i) => { obj[normalizeKey(h)] = row[i] !== undefined ? row[i] : ""; });
+  return obj;
+}
+
+function readAll(key) {
+  const sheet = getSheetFor(key);
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return [];
+  return rows.slice(1)
+    .filter(r => r[0] !== "" && r[0] !== null && r[0] !== undefined)
+    .map(r => rowToObj(key, r))
+    .reverse(); // newest first
+}
+
+// ── Routing ────────────────────────────────────────────────
+function doGet(e) {
+  try {
+    if (!isAuthed(e.parameter.token || "")) return unauthorized();
+    const action = (e.parameter.action || "getAll");
+    if (action === "delete") {
+      return withLock(function () { return handleDelete(e.parameter.entity || "expense", e.parameter.id); });
+    }
+    if (action === "getAll") {
+      return jsonResponse({
+        expenses:  readAll("expense"),
+        accounts:  readAll("account"),
+        goals:     readAll("goal"),
+        budgets:   readAll("budget"),
+        portfolio: readAll("portfolio")
+      });
+    }
+    return jsonResponse(readAll("expense")); // back-compat
+  } catch (err) {
+    return jsonResponse({ error: err.message });
   }
 }
 
-async function addExpense() {
-  if (!currentUser) return showToast('Please select who you are first');
-  const amount = parseFloat(document.getElementById('amount').value);
-  if (!amount || amount <= 0) return showToast('Enter a valid amount');
-  if (!API_URL) return showToast('Please set your Apps Script URL first');
-
-  const btn = document.getElementById('add-btn');
-  btn.disabled = true;
-  btn.textContent = 'Adding...';
-
+function doPost(e) {
   try {
-    const payload = {
-      amount,
-      category: document.getElementById('category').value,
-      note: document.getElementById('note').value.trim(),
-      addedBy: currentUser
-    };
-
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
+    const data = JSON.parse(e.postData.contents);
+    if (!isAuthed(data.token || "")) return unauthorized();
+    const entity = data.entity || "expense";
+    const action = data.action || "add";
+    return withLock(function () {
+      if (action === "add")       return handleAdd(entity, data);
+      if (action === "update")    return handleUpdate(entity, data);
+      if (action === "increment") return handleIncrement(entity, data);
+      if (action === "batch")     return handleBatch(entity, data);
+      if (action === "delete")    return handleDelete(entity, data.id);
+      return jsonResponse({ error: "Unknown action" });
     });
-    const data = await res.json();
+  } catch (err) {
+    return jsonResponse({ error: err.message });
+  }
+}
 
-    if (data.success) {
-      document.getElementById('amount').value = '';
-      document.getElementById('note').value = '';
-      showToast('Expense added ✓');
-      await loadExpenses();
-    } else {
-      showToast('Error: ' + (data.error || 'Unknown'));
+// ── Add ────────────────────────────────────────────────────
+function handleAdd(entity, data) {
+  const sheet = getSheetFor(entity);
+  const id = data.id ? data.id.toString() : Date.now().toString();
+  const now = new Date().toISOString();
+  let row;
+  switch (entity) {
+    case "expense":
+      row = [ id, data.date || now, parseFloat(data.amount) || 0,
+              data.category || "Other", data.note || "",
+              data.addedBy || "", data.type || "expense", data.account || "" ];
+      break;
+    case "account":
+      row = [ id, data.name || "Account", data.type || "Bank",
+              parseFloat(data.openingBalance) || 0, data.addedBy || "", now ];
+      break;
+    case "goal":
+      row = [ id, data.name || "Goal", parseFloat(data.target) || 0,
+              parseFloat(data.saved) || 0, data.emoji || "🎯",
+              data.color || "#C4603A", data.addedBy || "", now ];
+      break;
+    case "budget":
+      row = [ id, data.category || "Other", parseFloat(data.limit) || 0,
+              data.addedBy || "", now ];
+      break;
+    case "portfolio":
+      row = [ id, data.type || "investment", data.name || "Item",
+              parseFloat(data.amount) || 0, data.note || "", data.addedBy || "", now ];
+      break;
+    default:
+      return jsonResponse({ error: "Unknown entity" });
+  }
+  sheet.appendRow(row);
+  return jsonResponse({ success: true, id });
+}
+
+// ── Update (rewrites the matching row in place) ────────────
+function handleUpdate(entity, data) {
+  const sheet = getSheetFor(entity);
+  const headers = SHEETS[entity].headers;
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0].toString() === data.id.toString()) {
+      const current = rows[i];
+      const updated = headers.map((h, idx) => {
+        const k = normalizeKey(h);
+        if (k === "id") return current[0];
+        if (data[k] !== undefined && data[k] !== null) {
+          if (["amount","target","saved","limit","openingBalance"].indexOf(k) !== -1) {
+            return parseFloat(data[k]) || 0;
+          }
+          return data[k];
+        }
+        return current[idx] !== undefined ? current[idx] : "";
+      });
+      sheet.getRange(i + 1, 1, 1, headers.length).setValues([updated]);
+      return jsonResponse({ success: true, id: data.id });
     }
-  } catch (e) {
-    showToast('Failed to add. Check connection.');
   }
-
-  btn.disabled = false;
-  btn.textContent = 'Add Expense';
+  return jsonResponse({ error: "Row not found" });
 }
 
-async function deleteExpense(id) {
-  if (!confirm('Delete this expense?')) return;
-  if (!API_URL) return;
-  try {
-    const res = await fetch(`${API_URL}?action=delete&id=${id}`);
-    const data = await res.json();
-    if (data.success) {
-      showToast('Deleted');
-      await loadExpenses();
+// ── Increment a numeric field atomically (used for goal contributions) ──
+function handleIncrement(entity, data) {
+  const sheet = getSheetFor(entity);
+  const headers = SHEETS[entity].headers;
+  const field = data.field || "Saved";
+  const colIdx = headers.indexOf(field);
+  if (colIdx === -1) return jsonResponse({ error: "bad field" });
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0].toString() === data.id.toString()) {
+      const cur = parseFloat(rows[i][colIdx]) || 0;
+      const next = cur + (parseFloat(data.amount) || 0);
+      sheet.getRange(i + 1, colIdx + 1).setValue(next);
+      return jsonResponse({ success: true, value: next });
     }
-  } catch (e) {
-    showToast('Delete failed');
   }
+  return jsonResponse({ error: "Row not found" });
 }
 
-// ── Render ──
-function renderAll() {
-  renderSummary();
-  renderList();
+// ── Batch-replace budgets in one call (atomic, fast) ───────
+function handleBatch(entity, data) {
+  if (entity !== "budget") return jsonResponse({ error: "batch supports budget only" });
+  const sheet = getSheetFor("budget");
+  const headers = SHEETS.budget.headers; // ID, Category, Limit, AddedBy, Created
+  const last = sheet.getLastRow();
+  if (last > 1) sheet.getRange(2, 1, last - 1, headers.length).clearContent();
+  const now = new Date().toISOString();
+  const items = (data.items || []).filter(it => (parseFloat(it.limit) || 0) > 0);
+  const out = items.map(it => [
+    it.id ? it.id.toString() : (Date.now().toString() + Math.floor(Math.random() * 1000)),
+    it.category || "Other", parseFloat(it.limit) || 0, data.addedBy || "", now
+  ]);
+  if (out.length) sheet.getRange(2, 1, out.length, headers.length).setValues(out);
+  return jsonResponse({ success: true, count: out.length });
 }
 
-function renderSummary() {
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const weekStart = new Date(now); weekStart.setDate(now.getDate() - 6);
-
-  const thisMonth = expenses.filter(e => new Date(e.date) >= monthStart);
-  const thisWeek = expenses.filter(e => new Date(e.date) >= weekStart);
-
-  const totalMonth = thisMonth.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
-  const totalWeek = thisWeek.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
-
-  document.getElementById('total-month').textContent = '₨ ' + fmt(totalMonth);
-  document.getElementById('total-week').textContent = '₨ ' + fmt(totalWeek);
-  document.getElementById('entry-count').textContent = thisMonth.length + ' entries this month';
-
-  // Category breakdown
-  const cats = {};
-  thisMonth.forEach(e => {
-    cats[e.category] = (cats[e.category] || 0) + parseFloat(e.amount || 0);
-  });
-
-  const sorted = Object.entries(cats).sort((a,b) => b[1] - a[1]);
-  const max = sorted[0]?.[1] || 1;
-
-  const bEl = document.getElementById('breakdown');
-  if (sorted.length === 0) {
-    bEl.innerHTML = '<div style="font-size:13px;color:var(--ink-faint);padding:6px 0">No expenses this month yet.</div>';
-    return;
+// ── Delete ─────────────────────────────────────────────────
+function handleDelete(entity, id) {
+  const sheet = getSheetFor(entity);
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0].toString() === id.toString()) {
+      sheet.deleteRow(i + 1);
+      return jsonResponse({ success: true });
+    }
   }
-
-  bEl.innerHTML = sorted.map(([cat, amt], i) => `
-    <div class="breakdown-row">
-      <span class="cat-name">${CAT_COLORS[cat]?.emoji || '•'} ${cat}</span>
-      <div class="bar-wrap">
-        <div class="bar-fill" style="width:${Math.round(amt/max*100)}%;background:${BAR_COLORS[i % BAR_COLORS.length]}"></div>
-      </div>
-      <span class="cat-amt">₨ ${fmt(amt)}</span>
-    </div>
-  `).join('');
+  return jsonResponse({ error: "Row not found" });
 }
 
-function renderList() {
-  const el = document.getElementById('expense-list');
-  if (!expenses.length) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No expenses yet. Add your first one above!</p></div>`;
-    return;
-  }
-
-  el.innerHTML = expenses.map(e => {
-    const cat = CAT_COLORS[e.category] || { bg: '#EEE', emoji: '•' };
-    const d = new Date(e.date);
-    const dateStr = d.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
-
-    return `
-      <div class="expense-item">
-        <div class="cat-dot" style="background:${cat.bg}">${cat.emoji}</div>
-        <div class="expense-main">
-          <div class="expense-top">
-            <span class="expense-category">${e.category}</span>
-            <span class="who-badge ${e.addedBy}">${e.addedBy === 'H' ? 'Husband' : 'Wife'}</span>
-          </div>
-          <div class="expense-note">${e.note || '<span style="color:var(--ink-faint);font-style:italic">No note</span>'}</div>
-        </div>
-        <div class="expense-right">
-          <span class="expense-amount">₨ ${fmt(e.amount)}</span>
-          <span class="expense-date">${dateStr}</span>
-          <button class="delete-btn" onclick="deleteExpense('${e.id}')" title="Delete">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
+// ── Response helper ────────────────────────────────────────
+function jsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
 }
-
-function fmt(n) {
-  return Math.round(parseFloat(n || 0)).toLocaleString('en-IN');
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-function startAutoRefresh() {
-  if (refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(loadExpenses, 20000);
-}
-</script>
-</body>
-</html>
